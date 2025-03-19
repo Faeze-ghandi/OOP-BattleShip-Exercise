@@ -1,1 +1,242 @@
-بعد از فورک کردن پروژه، در این پوشه برای خود یک پوشه جدید درست کنید که اسمش {شماره دانشجویی شما} باشد سپس کد های خود را در آن پوشه قرار دهید و پوش کنید، سپس وقتی که پروژه شما تکمیل شد پول رکوئست بزنید.
+/*سلام کد من هربار که جدول چاپ میشه از اول جدول رو مقدار دهی میکنه و
+جای کشتی ها متفاوت میشه
+ */
+import java.util.Scanner;
+
+
+public class BattleShip {
+    static final int GRID_SIZE = 10;
+    static Scanner scanner = new Scanner(System.in);
+    private final Player player1;
+    private final Player player2;
+
+    public BattleShip() {
+        player1 = new Player("Player 1");
+        player2 = new Player("Player 2");
+    }
+
+    public void startGame() {
+
+        player1.getGrid().placeShipsRandomly();
+        player2.getGrid().placeShipsRandomly();
+
+        while (!isGameOver()) {
+            System.out.println("\n" + player1.getName() + "'s turn:");
+            player1.takeTurn(player2.getGrid(), scanner, GRID_SIZE);
+            printPlayerGrids();
+
+            if (isGameOver()) break;
+
+            System.out.println("\n" + player2.getName() + "'s turn:");
+            player2.takeTurn(player1.getGrid(), scanner, GRID_SIZE);
+            printPlayerGrids();
+        }
+
+        System.out.println("\nGame Over!");
+        printFinalGrids();
+    }
+
+    private boolean isGameOver() {
+        return (player1.getGrid().areAllShipsSunk() || player2.getGrid().areAllShipsSunk());
+    }
+
+    private void printPlayerGrids() {
+        System.out.println("\nCurrent Grids:");
+        System.out.println(player1.getName() + "'s Tracking Grid:");
+        player1.getTrackingGrid().printGrid();
+
+        System.out.println(player2.getName() + "'s Tracking Grid:");
+        player2.getTrackingGrid().printGrid();
+    }
+
+    private void printFinalGrids() {
+        System.out.println("\nFinal Grids:");
+        System.out.println(player1.getName() + "'s Grid:");
+        player1.getGrid().printGrid();
+
+        System.out.println(player2.getName() + "'s Grid:");
+        player2.getGrid().printGrid();
+    }
+
+    public static void main(String[] args) {
+        BattleShip game = new BattleShip();
+        game.startGame();
+    }
+}
+
+class Grid {
+
+    private final char[][] grid;
+
+    public Grid() {
+        grid = new char[BattleShip.GRID_SIZE][BattleShip.GRID_SIZE];
+        for (int i = 0; i < BattleShip.GRID_SIZE; i++) {
+            for (int j = 0; j < BattleShip.GRID_SIZE; j++) {
+                grid[i][j] = '~';
+            }
+        }
+    }
+
+    public boolean canPlaceShip(int row, int col, int size, boolean horizontal) {
+        if (horizontal) {
+            if (col + size > grid.length) return false;
+            for (int i = 0; i < size; i++) {
+                if (grid[row][col + i] != '~') return false;
+            }
+        } else {
+            if (row + size > grid.length) return false;
+            for (int i = 0; i < size; i++) {
+                if (grid[row + i][col] != '~') return false;
+            }
+        }
+        return true;
+    }
+
+    public void placeShip(int row, int col, int size, boolean horizontal) {
+        if (horizontal) {
+            for (int i = 0; i < size; i++) {
+                grid[row][col + i] = '*';
+            }
+        } else {
+            for (int i = 0; i < size; i++) {
+                grid[row + i][col] = '*';
+            }
+        }
+    }
+
+    public void placeShipsRandomly() {
+        int[] shipSizes = {5, 4, 3, 3, 2};
+        for (int size : shipSizes) {
+            boolean placed = false;
+            while (!placed) {
+                int row = (int) (Math.random() * grid.length);
+                int col = (int) (Math.random() * grid.length);
+                boolean horizontal = Math.random() > 0.5;
+
+                if (canPlaceShip(row, col, size, horizontal)) {
+                    placeShip(row, col, size, horizontal);
+                    placed = true;
+                }
+            }
+        }
+    }
+
+    public boolean attackCell(int row, int col) {
+        if (grid[row][col] == '*') {
+            grid[row][col] = 'H';
+            return true;
+        } else {
+            grid[row][col] = 'M';
+            return false;
+        }
+    }
+
+    public boolean areAllShipsSunk() {
+        for (int i = 0; i < grid.length; i++) {
+            for (int j = 0; j < grid[i].length; j++) {
+                if (grid[i][j] == '*') return false;
+            }
+        }
+        return true;
+    }
+
+    public void markHit(int row, int col) {
+        grid[row][col] = 'H';
+    }
+
+    public void markMiss(int row, int col) {
+        grid[row][col] = 'M';
+    }
+
+    public void printGrid() {
+        System.out.print("  ");
+        for (int i = 1; i <= grid.length; i++) {
+            System.out.print(i + " ");
+        }
+        System.out.println();
+        for (int i = 0; i < grid.length; i++) {
+            System.out.print((char) ('A' + i) + " ");
+            for (int j = 0; j < grid[i].length; j++) {
+                System.out.print(grid[i][j] + " ");
+            }
+            System.out.println();
+        }
+    }
+}
+
+import java.util.Scanner;
+
+class Player {
+    private final String name;
+    private final Grid grid;
+    private final Grid trackingGrid;
+
+    public Player(String name) {
+        this.name = name;
+        this.grid = new Grid();
+        this.trackingGrid = new Grid();
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public Grid getGrid() {
+        return grid;
+    }
+
+    public Grid getTrackingGrid() {
+        return trackingGrid;
+    }
+
+    public void takeTurn(Grid opponentGrid, Scanner scanner, int GRID_SIZE) {
+        System.out.print("Enter your attack coordinates (e.g., A5): ");
+        String coordinates = scanner.nextLine().toUpperCase();
+
+        while (!isValidInput(coordinates, GRID_SIZE)) {
+            System.out.print("Invalid input. Enter your attack coordinates (e.g., A5): ");
+            coordinates = scanner.nextLine().toUpperCase();
+        }
+
+        int row = coordinates.charAt(0) - 'A';
+        int col = Integer.parseInt(coordinates.substring(1)) - 1;
+
+        if (opponentGrid.attackCell(row, col)) {
+            System.out.println("Hit!");
+            trackingGrid.markHit(row, col);
+        } else {
+            System.out.println("Miss!");
+            trackingGrid.markMiss(row, col);
+        }
+    }
+
+    private boolean isValidInput(String coordinates, int GRID_SIZE) {
+        if (!(coordinates.length() == 2 || coordinates.length() == 3)) {
+            return false;
+        }
+        char row = coordinates.charAt(0);
+        String colStr = coordinates.substring(1);
+
+        if (row < 'A' || row >= ('A' + GRID_SIZE)) {
+            return false;
+        }
+
+        if (!isNumeric(colStr)) {
+            return false;
+        }
+
+        int col = Integer.parseInt(colStr);
+        return col >= 1 && col <= GRID_SIZE;
+    }
+
+
+    private boolean isNumeric(String str) {
+        for (char c : str.toCharArray()) {
+            if (!Character.isDigit(c)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+}
